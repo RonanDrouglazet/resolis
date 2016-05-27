@@ -35,12 +35,7 @@
         $(window).resize(that.resize)
         that.resize()
         that._initMouseHandling()
-
-        if (document.referrer.match(/echolalia|atlas|halfviz/)){
-          // if we got here by hitting the back button in one of the demos, 
-          // start with the demos section pre-selected
-          that.switchSection('demos')
-        }
+        
       },
       resize:function(){
         canvas.width = $(window).width()
@@ -56,20 +51,18 @@
           gfx.line(p1, p2, {stroke:"#b2b19d", width:2, alpha:edge.target.data.alpha})
         })
         sys.eachNode(function(node, pt){
-          var w =  100;
+          var style = {color:"white",align:"center", font:"Arial", size:node.data.fontSize}
+          var w =  gfx.textWidth(node.name, style) * node.data.coef;
+
           if (node.data.alpha===0) return
           if (node.data.shape=='dot' && node.data.isLink){
-            w = 75;
             gfx.oval(pt.x-w/2, pt.y-w/2, w, w, {fill:node.data.color, alpha:node.data.alpha})
-            gfx.text(node.name, pt.x, pt.y+7, {color:"white", align:"center", font:"Arial", size:18})
-            gfx.text(node.name, pt.x, pt.y+7, {color:"white",align:"center", font:"Arial", size:18})
+            gfx.text(node.name, pt.x, pt.y+7, style)
           } else  if (node.data.shape=='dot'){
             gfx.oval(pt.x-w/2, pt.y-w/2, w, w, {fill:node.data.color, alpha:node.data.alpha})
-            gfx.text(node.name, pt.x, pt.y+7, {color:"white", align:"center", font:"Arial", size:12})
-            gfx.text(node.name, pt.x, pt.y+7, {color:"white",align:"center", font:"Arial", size:12})
+            gfx.text(node.name, pt.x, pt.y+7, style)
           }else{
             gfx.rect(pt.x-w/2, pt.y-8, w, 20, 4, {fill:node.data.color, alpha:node.data.alpha})
-            gfx.text(node.name, pt.x, pt.y+9, {color:"white", align:"center", font:"Arial", size:12})
             gfx.text(node.name, pt.x, pt.y+9, {color:"white", align:"center", font:"Arial", size:12})
           }
         })
@@ -115,30 +108,42 @@
           if (sys) sys.start()
         }
       },
+
+      getParents: function(currentNode) {
+        var parents = []
+        while (currentNode.data.parent) {
+          parents.push(currentNode.data.parent)
+          currentNode = sys.getNode(currentNode.data.parent)
+        }
+        return parents
+      },
       
       switchSection:function(newSection){
-        var parent = sys.getEdgesFrom(newSection)[0].source
+        var current = sys.getNode(newSection)
+        var parents = that.getParents(current)
+
+        console.log('section', newSection)
+        console.log('parents', parents)
         var children = $.map(sys.getEdgesFrom(newSection), function(edge){
           return edge.target
         })
         
         sys.eachNode(function(node){
-          if (node.data.isDeploy==true) return // skip all but leafnodes
-
+          if (node.name === newSection || parents.indexOf(node.name) !== -1) return
           var nowVisible = ($.inArray(node, children)>=0)
          // var nowVisibleTest = ($.inArray(node.data.isDeploy==false))
-           
 
+          var oldAlpha = node.data.alpha
           var newAlpha = (nowVisible) ? 1 : 0
           //var newAlpha = (nowVisibleTest) ? 1 : 1
-        
+          console.log(node.name, nowVisible)
 
           var dt = (nowVisible) ? .5 : .5
           sys.tweenNode(node, dt, {alpha:newAlpha})
 
-          if (newAlpha==1){
-            node.p.x = parent.p.x + .05*Math.random() - .025
-            node.p.y = parent.p.y + .05*Math.random() - .025
+          if (newAlpha==1 && oldAlpha != 1){
+            node.p.x = current.p.x + .05*Math.random() - .025
+            node.p.y = current.p.y + .05*Math.random() - .025
             node.tempMass = .001
           }
         })
@@ -172,10 +177,9 @@
                  dom.removeClass('linkable')
                  window.status = ''
               }
-            }else if (nearest.node.data.isDeploy==true){
+            }else if (nearest.node.data.alpha == 1){
               if (nearest.node.name!=_section){
-                _section = nearest.node.name
-                              
+                _section = nearest.node.name      
 
                 that.switchSection(_section)
               }
@@ -356,45 +360,25 @@
       demo:"#a7af00"
     }
 
-              var theUI = {
+    var theUI = {
       nodes:{
-
-
-
-        "Resolis":{color:"black", shape:"dot", alpha:1,isDeploy:true}, 
-      
-             "Catégorie n°1":{color:CLR.branch, shape:"dot",isDeploy:true, alpha:1}, 
-             "Sous Catégorie n°2":{color:CLR.demo,  shape:"dot",isDeploy:true,alpha:1,isLevel1:true},
-             "Sous Catégorie n°3":{color:CLR.demo,  shape:"dot",isDeploy:true,alpha:1,isLevel1:true},
-             "Sous Catégorie n°4":{color:CLR.demo,  shape:"dot",isDeploy:true,alpha:1,isLevel1:true},
-
-
-
-
-             "20%":{color:CLR.demo, alpha:0, isLink: true, shape:"dot",link:'https://github.com/samizdatco/arbor'},
-             "20%":{color:CLR.demo, alpha:0, isLink: true, shape:"dot",link:'https://github.com/samizdatco/arbor'},
-             "40%":{color:CLR.demo, alpha:0, isLink: true, shape:"dot",link:'https://github.com/samizdatco/arbor'},
-             "80%":{color:CLR.demo, alpha:0, isLink: true, shape:"dot",link:'https://github.com/samizdatco/arbor'},
-
-             // docs:{color:CLR.branch, shape:"dot", alpha:1,isDeploy:true}, 
-             // reference:{color:CLR.doc, alpha:0, link:'#reference'},
-             // introduction:{color:CLR.doc, alpha:0, link:'#introduction'},
-
-             // code:{color:CLR.branch, shape:"dot", alpha:1,isDeploy:true},
-             // github:{color:CLR.code, alpha:0, link:'https://github.com/samizdatco/arbor'},
-             // ".zip":{color:CLR.code, alpha:0, link:'/js/dist/arbor-v0.92.zip'},
-             // ".tar.gz":{color:CLR.code, alpha:0, link:'/js/dist/arbor-v0.92.tar.gz'}
-            },
+        "Resolis": {color:"black", alpha:1, fontSize: 18, coef: 1.5, shape:"dot"}, 
+        "Catégorie n°1":{color:CLR.branch, alpha:1, fontSize: 12, coef: 1.2, parent: "Resolis", shape:"dot"}, 
+        "Sous Catégorie n°2":{color:CLR.demo, alpha:0, fontSize: 12, coef: 1.2,parent: "Catégorie n°1", shape:"dot"},
+        "Sous Catégorie n°3":{color:CLR.demo, alpha:0, fontSize: 12, coef: 1.2,parent: "Catégorie n°1", shape:"dot"},
+        "Sous Catégorie n°4":{color:CLR.demo, alpha:0, fontSize: 12, coef: 1.2,parent: "Catégorie n°1", shape:"dot"},
+        "20%":{color:CLR.demo, alpha:0, isLink: true, fontSize: 18, coef: 1.5,parent: "Sous Catégorie n°2", shape:"dot",link:'https://github.com/samizdatco/arbor'},
+        "40%":{color:CLR.demo, alpha:0, isLink: true, fontSize: 18, coef: 1.5,parent: "Sous Catégorie n°3", shape:"dot",link:'https://github.com/samizdatco/arbor'},
+        "80%":{color:CLR.demo, alpha:0, isLink: true, fontSize: 18, coef: 1.5,parent: "Sous Catégorie n°4", shape:"dot",link:'https://github.com/samizdatco/arbor'},
+      },
       edges:{
         "Resolis":{
-          "Catégorie n°1":{length:.8},
-          // docs:{length:.8},
-          // code:{length:.8}
+          "Catégorie n°1":{},
         },
         "Catégorie n°1":{
-               "Sous Catégorie n°2":{},
-               "Sous Catégorie n°3":{},
-               "Sous Catégorie n°4":{}
+          "Sous Catégorie n°2":{},
+          "Sous Catégorie n°3":{},
+          "Sous Catégorie n°4":{}
         },
         "Sous Catégorie n°2":{
             "20%":{}
@@ -405,13 +389,6 @@
         "Sous Catégorie n°4":{
             "80%":{}
         }
-        // docs:{reference:{},
-        //       introduction:{}
-        // },
-        // code:{".zip":{},
-        //       ".tar.gz":{},
-        //       "github":{}
-        // }
       }
     }
 
